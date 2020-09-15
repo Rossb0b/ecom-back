@@ -10,17 +10,26 @@ exports.createBucket = async (req, res) => {
   const bucket = new Bucket(req.body);
   bucket.userId = req.userData.userId;
 
-  try {
-    const createdBucket = await bucket.save();
+  bucket.validate(async (e) => {
 
-    res.status(200).json({
-      ...createdBucket
-    });
-  } catch (e) {
-    res.status(500).json({
-      e: e,
-    });
-  }
+    if (e) {
+      return res.status(422).json({
+        e: e,
+      });
+    }
+    
+    try {
+      const createdBucket = await bucket.save();
+      
+      res.status(201).json({
+        ...createdBucket
+      });
+    } catch (e) {
+      res.status(400).json({
+        e: e,
+      });
+    }
+  });
 };
 
 /**
@@ -41,7 +50,7 @@ exports.getBucket = async (req, res) => {
 
       res.status(200).json(bucket);
   } catch (e) {
-    res.status(401).json({
+    res.status(404).json({
       e: e,
     });
   }
@@ -55,35 +64,32 @@ exports.updateBucket = async (req, res) => {
 
   const bucket = new Bucket(req.body);
   let total = 0;
-
-  for (const product of bucket.products) {
-    total = total + (product.product.price * product.volume);
-  }
-
-  bucket.price = (Math.round(total * 100) / 100).toFixed(2);
+  bucket.price = total;
 
   bucket.validate(async (e) => {
+
     if (e) {
-      return res.status(500).json({
+      return res.status(422).json({
         e: e,
       });
-    } else {
-      try {
-        const result = await Bucket.updateOne({ _id: bucket._id }, bucket);
+    }
+
+    for (const product of bucket.products) {
+      total = total + (product.product.price * product.volume);
+    }
   
-        // Checking if the bucket has been modified
-        if (result.n > 0) {
-          return res.status(200).json(bucket);
-        } else {
-          return res.status(401).json({
-              e : "Unknow error with the edit",
-          });
-        }
-      } catch (e) {
-        res.status(500).json({
-          e: e,
-        });
-      }
+    bucket.price = (Math.round(total * 100) / 100).toFixed(2);
+
+    try {
+      const result = await Bucket.updateOne({ _id: bucket._id }, bucket);
+
+      // Checking if the bucket has been modified
+      if (result.n > 0) return res.status(200).json(bucket);
+      else  return res.status(401).json({e: "Unknow error with the edit"});
+    } catch (e) {
+      res.status(400).json({
+        e: e,
+      });
     }
   });
 };
@@ -97,7 +103,7 @@ exports.deleteBucket = async (req, res) => {
     const result = await Bucket.deleteMany({ 'userId': req.userData.userId});
 
     if (result.n > 0) res.status(200).json();
-    else res.status(401).json();
+    else res.status(401).json({e: 'Unknow error with the deletion'});
   } catch (e) {
     res.status(500).json({
       e: e,
@@ -115,15 +121,11 @@ exports.updateBucketAfterProductDeletion = async (req, res) => {
 
   try {
     result = await Bucket.updateMany({ 'products.product._id': req.params.id }, { $pull: { 'products': { 'product._id': [req.params.id] } } });
-    if (result.n > 0) {
-      return res.status(200).json();
-    } else {
-      return res.status(401).json({
-          e : "Unknow error with the edit",
-      });
-    }
+
+    if (result.n > 0) return res.status(200).json();
+    else return res.status(401).json({e: "Unknow error with the edit"});
   } catch (e) {
-    res.status(500).json({
+    res.status(400).json({
       e: e,
     });
   }

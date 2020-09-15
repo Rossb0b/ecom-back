@@ -12,7 +12,7 @@ exports.getProducts = async (req, res) => {
     const products = await Product.find({});
     res.status(200).json(products);
   } catch (e) {
-    res.status(500).json({
+    res.status(404).json({
       e: e,
     });
   }
@@ -27,7 +27,7 @@ exports.getOneProduct = async (req, res) => {
     const product = await Product.findById(req.params.id);
     res.status(200).json(product);
   } catch (e) {
-    res.status(400).json({
+    res.status(404).json({
       e: e,
     });
   }
@@ -41,7 +41,7 @@ exports.addProduct = async (req, res) => {
 
   if (!req.body.files || !req.body.name || !req.body.description || !req.body.price) {
     return res.status(422).json({
-      e: 'wrong parameters',
+      e: e,
     });
   }
 
@@ -62,7 +62,7 @@ exports.addProduct = async (req, res) => {
   AWS.config.loadFromPath('./aws-config.json');
 
   // Instantiates the S3 bucket connexion
-  let s3 = new AWS.S3();
+  const s3 = new AWS.S3();
 
   // Loop through every files to check if their are well passed in base64 
   for (const file of files) {
@@ -90,7 +90,7 @@ exports.addProduct = async (req, res) => {
   for (const response of responses) {
     const isValid = MIME_TYPE_MAP[responses.type];
 
-    let error = new Error('Invalid mime type');
+    const error = new Error('Invalid mime type');
 
     if (isValid) {
       error = null;
@@ -100,18 +100,44 @@ exports.addProduct = async (req, res) => {
     const ext = MIME_TYPE_MAP[response.type];
     const fileName = name + '-' + Date.now() + '.' + ext;
 
-    s3.putObject({
+    const params = {
       'Bucket': bucketName,
       'Key': fileName,
       'Body': response.data
-    }, function (resp) {
+    };
+
+    const upload = s3.putObject(params).promise();
+    
+    upload.then(() => {
+      imageUri = url + fileName;
+      imageAlt = "image du produit : " + req.body.name;
+
+      const image = { uri: imageUri, alt: imageAlt };
+      formatedFiles.push(image);
+    }).catch((e) => {
+      return e;
+      // return res.status(500).json({
+      //   e: e,
+      // });
     });
 
-    imageUri = url + fileName;
-    imageAlt = "image du produit : " + req.body.name;
+    // s3.putObject({
+    //   'Bucket': bucketName,
+    //   'Key': fileName,
+    //   'Body': response.data
+    // }, (e, data) => {
+    //   if (e) { 
+    //     return res.status(500).json({
+    //       e: e,
+    //     });
+    //   }
+    // });
 
-    const image = { uri: imageUri, alt: imageAlt };
-    formatedFiles.push(image);
+    // imageUri = url + fileName;
+    // imageAlt = "image du produit : " + req.body.name;
+
+    // const image = { uri: imageUri, alt: imageAlt };
+    // formatedFiles.push(image);
 
     index++;
   }
@@ -206,7 +232,12 @@ exports.updateProduct = async (req, res) => {
       'Bucket': bucketName,
       'Key': fileName,
       'Body': response.data
-    }, function (resp) {
+    }, (e, data) => {
+      if (e) { 
+        return res.status(500).json({
+          e: e,
+        });
+      }
     });
 
     imageUri = url + fileName;
@@ -240,8 +271,12 @@ exports.updateProduct = async (req, res) => {
       }
     }
 
-    s3.deleteObjects(params, (err, data) => {
-      if (err) throw err;
+    s3.deleteObjects(params, (e, data) => {
+      if (e) { 
+        return res.status(500).json({
+          e: e,
+        });
+      }
     });
   
     product = {
@@ -261,7 +296,7 @@ exports.updateProduct = async (req, res) => {
       });
     }
   } catch (e) {
-    res.status(500).json({
+    res.status(400).json({
       e: e,
     });
   }
@@ -286,7 +321,7 @@ exports.deleteProduct = async (req, res, next) => {
       Objects: []
     }
   };
-
+  
   try {
     const product = await getProduct(req.params.id);
   
@@ -298,8 +333,12 @@ exports.deleteProduct = async (req, res, next) => {
       params.Delete.Objects.push(imageName);
     }
   
-    s3.deleteObjects(params, (err, data) => {
-      if (err) throw err;
+    s3.deleteObjects(params, (e, data) => {
+      if (e) { 
+        return res.status(500).json({
+          e: e,
+        });
+      }
     });
 
     const result = await Product.deleteOne({ _id: req.params.id });
@@ -325,6 +364,8 @@ getProduct = async (productId) => {
   try {
     return await Product.findById({ _id: productId });
   } catch (e) {
-    throw e;
+    return res.status(404).json({
+      e :e,
+    });
   }
 };

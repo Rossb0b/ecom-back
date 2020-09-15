@@ -2,6 +2,7 @@ const Command = require('../models/command');
 const Product = require('../models/product');
 const Bucket = require('../models/bucket');
 const User = require('../models/user');
+const e = require('express');
 
 /**
  * Method to create a new Command
@@ -10,6 +11,13 @@ const User = require('../models/user');
 exports.createCommand = async (req, res) => {
 
   const command = new Command();
+
+  if (!req.body.billingAddress || !req.body.shippingAddress) {
+    return res.status(422).json({
+      e: e,
+    });
+  }
+
   command.clientInformation.billingAddress = req.body.billingAddressId;
   command.clientInformation.shippingAddress = req.body.shippingAddressId;
   command.clientInformation.user = req.userData.userId;
@@ -44,9 +52,9 @@ exports.createCommand = async (req, res) => {
 
     command.bucketInformation.price = bucket.price;
     const createdCommand = await command.save();
-    res.status(200).json(createdCommand);
+    res.status(201).json(createdCommand);
   } catch (e) {
-    res.status(500).json({
+    res.status(400).json({
       e: e,
     });
   }
@@ -142,7 +150,7 @@ exports.getCommands = async (req, res) => {
 
     res.status(200).json(commands);
   } catch (e) {
-    res.status(500).json({
+    res.status(404).json({
       e: e,
     });
   }
@@ -190,7 +198,7 @@ exports.getCommand = async (req, res) => {
 
     res.status(200).json(command);
   } catch (e) {
-    res.status(500).json({
+    res.status(404).json({
       e: e,
     });
   }

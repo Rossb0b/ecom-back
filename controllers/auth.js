@@ -18,7 +18,7 @@ exports.login = async (req, res) => {
     });
 
     if (!user) {
-      return res.status(401).json({
+      return res.status(404).json({
         message: 'Auth failed'
       });
     }
@@ -27,7 +27,7 @@ exports.login = async (req, res) => {
     const result = await bcrypt.compare(req.body.password, user.password);
 
     if (!result) {
-      return res.status(401).json({
+      return res.status(403).json({
         message: 'Auth failed'
       });
     }
@@ -43,8 +43,8 @@ exports.login = async (req, res) => {
       user: formatedUser
     });
   } catch (e) {
-    return res.status(401).json({
-      message: 'Unknown error', e: e
+    return res.status(422).json({
+      e: e,
     });
   }
 };
@@ -63,7 +63,7 @@ exports.autoLogin = async (req, res) => {
     });
 
     if (!user) {
-      return res.status(401).json({
+      return res.status(404).json({
         e: e,
       });
     }
@@ -79,7 +79,7 @@ exports.autoLogin = async (req, res) => {
       user: formatedUser
     });
   } catch (e) {
-    return res.status(401).json({
+    return res.status(422).json({
       e: e,
     });
   }

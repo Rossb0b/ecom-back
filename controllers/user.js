@@ -10,20 +10,29 @@ exports.createUser = async (req, res, next) => {
   let user = new User(req.body);
   let result;
 
-  try {
-    user.password = await hashPassword(req.body.password);
-    result = await user.save();
+  user.validate(async (e) => {
+    if (e) {
+      return res.status(422).json({
+        e: e,
+      });
+    }
 
-    // Instantiates the const formatedUser from the new user data without his id and his password
-    const { _id, password, ...formatedUser } = result._doc;
-    req.body = formatedUser;
-    // Call the method to log automaticly the user created
-    next();
-  } catch (e) {
-    res.status(500).json({
-      e: e
-    });
-  } 
+    try {
+      user.password = await hashPassword(req.body.password);
+      result = await user.save();
+  
+      // Instantiates the const formatedUser from the new user data without his id and his password
+      const { _id, password, ...formatedUser } = result._doc;
+      req.body = formatedUser;
+      // Call the method to log automaticly the user created
+      next();
+    } catch (e) {
+      res.status(500).json({
+        e: e
+      });
+    } 
+  })
+
   
 };
 
@@ -36,18 +45,22 @@ exports.updateUser = async (req, res) => {
   let user = new User(req.body);
   let result;
 
+  user.validate(async (e) => {
+
+    if (e) {
+      return res.status(422).json({
+        e: e,
+      });
+    }
+  });
+
   try {
     result = await User.updateOne({ _id: user._id }, user);
 
-    if (result.n > 0) {
-      return res.status(200).json(user);
-    } else {
-      return res.status(401).json({
-          e : "Unknow error with the edit",
-      });
-    }
+    if (result.n > 0) return res.status(200).json(user);
+    else return res.status(401).json({e: "Unknow error with the edit"});
   } catch (e) {
-    res.status(500).json({
+    res.status(400).json({
       e: e,
     });
   }
@@ -75,7 +88,7 @@ exports.getUserFromJWT = async (req, res) => {
 
     res.status(200).json(formatedUser);
   } catch (e) {
-    return res.status(401).json({
+    return res.status(404).json({
       e: e,
     });
   }
