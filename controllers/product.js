@@ -1,7 +1,7 @@
 const Product = require('../models/product');
 const AWS = require('aws-sdk');
 const { S3 } = require('aws-sdk');
-const bucketName = 'e-com-test';
+const bucketName = 'YOUR_BUCKET_NAME';
 
 /**
  * Method to fetch every products
