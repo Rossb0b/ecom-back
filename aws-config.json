@@ -1,4 +1,4 @@
 {
-  "accessKeyId": "YOUR_AWS_ACCESS_KEY",
-  "secretAccessKey": "YOUR_AWS_ACCESS_SECRET"
+  "accessKeyId": "YOUR_AWS_ACCESSKEY",
+  "secretAccessKey": "YOUR_AWS_SECRET"
 }

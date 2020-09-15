@@ -1,5 +1,4 @@
 const Command = require('../models/command');
-const Product = require('../models/product');
 const Bucket = require('../models/bucket');
 const User = require('../models/user');
 
@@ -10,6 +9,11 @@ const User = require('../models/user');
 exports.createCommand = async (req, res) => {
 
   const command = new Command();
+
+  if (!req.body.billingAddress || !req.body.shippingAddress) {
+    return res.status(422).send();
+  }
+
   command.clientInformation.billingAddress = req.body.billingAddressId;
   command.clientInformation.shippingAddress = req.body.shippingAddressId;
   command.clientInformation.user = req.userData.userId;
@@ -22,7 +26,7 @@ exports.createCommand = async (req, res) => {
       populate: {
         path: 'product',
         model: 'Product',
-        select: 'name price'
+        select: 'name price',
       }
     });
     
@@ -44,11 +48,9 @@ exports.createCommand = async (req, res) => {
 
     command.bucketInformation.price = bucket.price;
     const createdCommand = await command.save();
-    res.status(200).json(createdCommand);
+    res.status(201).json(createdCommand);
   } catch (e) {
-    res.status(500).json({
-      e: e,
-    });
+    res.status(400).json(e);
   }
 };
 
@@ -73,7 +75,7 @@ exports.getCommands = async (req, res) => {
         populate: {
           path: 'user',
           model: 'User',
-          select: 'firstname lastname'
+          select: 'firstname lastname',
         }
       });
 
@@ -86,7 +88,7 @@ exports.getCommands = async (req, res) => {
                 name: billingAddress.name,
                 address: billingAddress.address,
                 city: billingAddress.city,
-                postCode: billingAddress.postCode
+                postCode: billingAddress.postCode,
               };
             }
           }
@@ -97,7 +99,7 @@ exports.getCommands = async (req, res) => {
                 name: shippingAddress.name,
                 address: shippingAddress.address,
                 city: shippingAddress.city,
-                postCode: shippingAddress.postCode
+                postCode: shippingAddress.postCode,
               };
             }
           }
@@ -110,7 +112,7 @@ exports.getCommands = async (req, res) => {
         populate: {
           path: 'user',
           model: 'User',
-          select: 'firstname lastname'
+          select: 'firstname lastname',
         }
       });
 
@@ -122,7 +124,7 @@ exports.getCommands = async (req, res) => {
               name: billingAddress.name,
               address: billingAddress.address,
               city: billingAddress.city,
-              postCode: billingAddress.postCode
+              postCode: billingAddress.postCode,
             };
           }
         }
@@ -133,7 +135,7 @@ exports.getCommands = async (req, res) => {
               name: shippingAddress.name,
               address: shippingAddress.address,
               city: shippingAddress.city,
-              postCode: shippingAddress.postCode
+              postCode: shippingAddress.postCode,
             };
           }
         }
@@ -142,9 +144,7 @@ exports.getCommands = async (req, res) => {
 
     res.status(200).json(commands);
   } catch (e) {
-    res.status(500).json({
-      e: e,
-    });
+    res.status(404).json(e);
   }
 };
 
@@ -160,7 +160,7 @@ exports.getCommand = async (req, res) => {
       populate: {
         path: 'user',
         model: 'User',
-        select: 'firstname lastname'
+        select: 'firstname lastname',
       }
     });
 
@@ -171,7 +171,7 @@ exports.getCommand = async (req, res) => {
           name: billingAddress.name,
           address: billingAddress.address,
           city: billingAddress.city,
-          postCode: billingAddress.postCode
+          postCode: billingAddress.postCode,
         };
       }
     }
@@ -183,15 +183,13 @@ exports.getCommand = async (req, res) => {
           name: shippingAddress.name,
           address: shippingAddress.address,
           city: shippingAddress.city,
-          postCode: shippingAddress.postCode
+          postCode: shippingAddress.postCode,
         };
       }
     }
 
     res.status(200).json(command);
   } catch (e) {
-    res.status(500).json({
-      e: e,
-    });
+    res.status(404).json(e);
   }
 };

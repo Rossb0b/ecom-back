@@ -16,7 +16,7 @@ exports.getClientSecretAndValue = async (req, res) => {
       populate: {
         path: 'product',
         model: 'Product',
-        select: 'name price'
+        select: 'name price',
       }
     });
 
@@ -32,10 +32,7 @@ exports.getClientSecretAndValue = async (req, res) => {
       totalValue: commandPrice / 100,
     });
   } catch (e) {
-    console.log(e);
-    res.status(500).json({
-      e: e,
-    });
+    res.status(404).json(e);
   }
 };
 

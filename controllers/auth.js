@@ -14,12 +14,12 @@ const User = require('../models/user');
 exports.login = async (req, res) => {
   try {
     const user = await User.findOne({
-      email: req.body.email
+      email: req.body.email,
     });
 
     if (!user) {
-      return res.status(401).json({
-        message: 'Auth failed'
+      return res.status(404).json({
+        message: 'Auth failed',
       });
     }
 
@@ -27,8 +27,8 @@ exports.login = async (req, res) => {
     const result = await bcrypt.compare(req.body.password, user.password);
 
     if (!result) {
-      return res.status(401).json({
-        message: 'Auth failed'
+      return res.status(403).json({
+        message: 'Auth failed',
       });
     }
 
@@ -40,12 +40,10 @@ exports.login = async (req, res) => {
     res.status(200).json({
       token: token,
       expiresIn: 3600,
-      user: formatedUser
+      user: formatedUser,
     });
   } catch (e) {
-    return res.status(401).json({
-      message: 'Unknown error', e: e
-    });
+    return res.status(422).json(e);
   }
 };
 
@@ -57,15 +55,18 @@ exports.login = async (req, res) => {
  * @returns {json{e<string> || e<string>, token, expiresIn<number>, userId<string>}}
  */
 exports.autoLogin = async (req, res) => {
+
+  if (!req.body.email) {
+    return res.status(422).send();
+  }
+
   try {
     const user = await User.findOne({
-      email: req.body.email
+      email: req.body.email,
     });
 
     if (!user) {
-      return res.status(401).json({
-        e: e,
-      });
+      return res.status(404).json(e);
     }
 
     // Instantiates the const formatedUser from the new user data without his password
@@ -76,12 +77,10 @@ exports.autoLogin = async (req, res) => {
     res.status(200).json({
       token: token,
       expiresIn: 3600,
-      user: formatedUser
+      user: formatedUser,
     });
   } catch (e) {
-    return res.status(401).json({
-      e: e,
-    });
+    return res.status(422).json(e);
   }
 };
 
