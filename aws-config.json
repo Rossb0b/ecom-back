@@ -1,4 +1,4 @@
 {
-  "accessKeyId": "AKIAI3IETLOBSTZVFVEA",
-  "secretAccessKey": "eXjTX+GfiX8K63yCb7hC7Qzfr69rv3RhwPNUsh59"
+  "accessKeyId": "YOUR_AWS_ACCESSKEY",
+  "secretAccessKey": "YOUR_AWS_SECRET"
 }

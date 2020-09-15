@@ -10,11 +10,10 @@ exports.createUser = async (req, res, next) => {
   let user = new User(req.body);
   let result;
 
-  user.validate(async (e) => {
-    if (e) {
-      return res.status(422).json({
-        e: e,
-      });
+  user.validate(async (err) => {
+
+    if (err) {
+      return res.status(422).json(err);
     }
 
     try {
@@ -27,13 +26,9 @@ exports.createUser = async (req, res, next) => {
       // Call the method to log automaticly the user created
       next();
     } catch (e) {
-      res.status(500).json({
-        e: e
-      });
+      res.status(400).json(e);
     } 
-  })
-
-  
+  });
 };
 
 /**
@@ -45,25 +40,24 @@ exports.updateUser = async (req, res) => {
   let user = new User(req.body);
   let result;
 
-  user.validate(async (e) => {
+  user.validate(async (err) => {
 
-    if (e) {
-      return res.status(422).json({
-        e: e,
-      });
+    if (err) {
+      return res.status(422).json(err);
+    }
+
+    try {
+      result = await User.updateOne({ _id: user._id }, user);
+  
+      if (result.n > 0) {
+        return res.status(200).json(user);
+      } else {
+        return res.status(401).json({ e: "Unknow error with the edit" });
+      }
+    } catch (e) {
+      res.status(400).json(e);
     }
   });
-
-  try {
-    result = await User.updateOne({ _id: user._id }, user);
-
-    if (result.n > 0) return res.status(200).json(user);
-    else return res.status(401).json({e: "Unknow error with the edit"});
-  } catch (e) {
-    res.status(400).json({
-      e: e,
-    });
-  }
 };
 
 /**
@@ -83,13 +77,11 @@ exports.getUserFromJWT = async (req, res) => {
 
   try {
     user = await User.findById(req.userData.userId);
+
     // Instantiates the const formatedUser from the new user data without his id and his password
     const { password, ...formatedUser } = user._doc;
-
     res.status(200).json(formatedUser);
   } catch (e) {
-    return res.status(404).json({
-      e: e,
-    });
+    return res.status(404).json(e);
   }
 };

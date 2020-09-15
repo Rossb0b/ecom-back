@@ -1,7 +1,7 @@
 const Product = require('../models/product');
 const AWS = require('aws-sdk');
 const { S3 } = require('aws-sdk');
-const bucketName = 'YOUR_BUCKET_NAME';
+const bucketName = 'e-com-test';
 
 /**
  * Method to fetch every products
@@ -12,9 +12,7 @@ exports.getProducts = async (req, res) => {
     const products = await Product.find({});
     res.status(200).json(products);
   } catch (e) {
-    res.status(404).json({
-      e: e,
-    });
+    res.status(404).json(e);
   }
 };
 
@@ -27,9 +25,7 @@ exports.getOneProduct = async (req, res) => {
     const product = await Product.findById(req.params.id);
     res.status(200).json(product);
   } catch (e) {
-    res.status(404).json({
-      e: e,
-    });
+    res.status(404).json(e);
   }
 };
 
@@ -40,9 +36,7 @@ exports.getOneProduct = async (req, res) => {
 exports.addProduct = async (req, res) => {
 
   if (!req.body.files || !req.body.name || !req.body.description || !req.body.price) {
-    return res.status(422).json({
-      e: e,
-    });
+    return res.status(422).send();
   }
 
   const files = req.body.files;
@@ -53,7 +47,7 @@ exports.addProduct = async (req, res) => {
   const MIME_TYPE_MAP = {
     'image/png': 'png',
     'image/jpeg': 'jpeg',
-    'image/jpg': 'jpg'
+    'image/jpg': 'jpg',
   };
 
   // Define witch S3 bucket we are going to upload on
@@ -88,14 +82,6 @@ exports.addProduct = async (req, res) => {
    */
   let index = 0;
   for (const response of responses) {
-    const isValid = MIME_TYPE_MAP[responses.type];
-
-    const error = new Error('Invalid mime type');
-
-    if (isValid) {
-      error = null;
-    }
-
     const name = req.body.name.split(' ').join('-') + '-' + index;
     const ext = MIME_TYPE_MAP[response.type];
     const fileName = name + '-' + Date.now() + '.' + ext;
@@ -103,42 +89,21 @@ exports.addProduct = async (req, res) => {
     const params = {
       'Bucket': bucketName,
       'Key': fileName,
-      'Body': response.data
+      'Body': response.data,
     };
 
-    const upload = s3.putObject(params).promise();
+    try {
+      await s3.putObject(params).promise();
+    } catch (e) {
+      return res.status(500).send();
+    }
     
-    upload.then(() => {
-      imageUri = url + fileName;
-      imageAlt = "image du produit : " + req.body.name;
+    imageUri = url + fileName;
+    imageAlt = "image du produit : " + req.body.name;
 
-      const image = { uri: imageUri, alt: imageAlt };
-      formatedFiles.push(image);
-    }).catch((e) => {
-      return e;
-      // return res.status(500).json({
-      //   e: e,
-      // });
-    });
-
-    // s3.putObject({
-    //   'Bucket': bucketName,
-    //   'Key': fileName,
-    //   'Body': response.data
-    // }, (e, data) => {
-    //   if (e) { 
-    //     return res.status(500).json({
-    //       e: e,
-    //     });
-    //   }
-    // });
-
-    // imageUri = url + fileName;
-    // imageAlt = "image du produit : " + req.body.name;
-
-    // const image = { uri: imageUri, alt: imageAlt };
-    // formatedFiles.push(image);
-
+    const image = { uri: imageUri, alt: imageAlt };
+    formatedFiles.push(image);
+    
     index++;
   }
 
@@ -149,14 +114,19 @@ exports.addProduct = async (req, res) => {
     images: formatedFiles,
   });
 
-  try {
-    await product.save();
-    res.status(201).json();
-  } catch (e) {
-    res.status(400).json({
-      e: e,
-    });
-  }
+  product.validate(async (err) => {
+
+    if (err) {
+      return res.status(422).json(err);
+    } 
+    
+    try {
+      await product.save();
+      res.status(201).send();
+    } catch (e) {
+      res.status(400).json(e);
+    }
+  })
 };
 
 /**
@@ -166,9 +136,7 @@ exports.addProduct = async (req, res) => {
 exports.updateProduct = async (req, res) => {
 
   if (!req.body.filesToKeep || !req.body.filesToUpload || !req.body.name || !req.body.description || !req.body.price) {
-    return res.status(422).json({
-      e: 'wrong parameters',
-    });
+    return res.status(422).send();
   }
 
   const formatedFiles = req.body.filesToKeep;
@@ -184,9 +152,8 @@ exports.updateProduct = async (req, res) => {
   const MIME_TYPE_MAP = {
     'image/png': 'png',
     'image/jpeg': 'jpeg',
-    'image/jpg': 'jpg'
+    'image/jpg': 'jpg',
   };
-
 
   AWS.config.loadFromPath('./aws-config.json');
 
@@ -198,7 +165,7 @@ exports.updateProduct = async (req, res) => {
     const matches = file.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
 
     if (matches.length !== 3) {
-      return new Error('Invalid input string');
+      return res.status(422).send();
     }
 
     response = {
@@ -214,7 +181,7 @@ exports.updateProduct = async (req, res) => {
    * Define a new fileName for those and push them on the S3 bucket
    * Define the URL where we can find retrive them and a new alt for those
    */
-  let indexForResponses = 0;
+  let index = 0;
   for (const response of responses) {
     const isValid = MIME_TYPE_MAP[responses.type];
 
@@ -228,17 +195,17 @@ exports.updateProduct = async (req, res) => {
     const ext = MIME_TYPE_MAP[response.type];
     const fileName = name + '-' + Date.now() + '.' + ext;
 
-    s3.putObject({
+    const params = {
       'Bucket': bucketName,
       'Key': fileName,
       'Body': response.data
-    }, (e, data) => {
-      if (e) { 
-        return res.status(500).json({
-          e: e,
-        });
-      }
-    });
+    }
+
+    try {
+      await s3.putObject(params).promise();
+    } catch (e) {
+      return res.status(500).send();
+    }
 
     imageUri = url + fileName;
     imageAlt = "image du produit : " + req.body.name;
@@ -246,60 +213,62 @@ exports.updateProduct = async (req, res) => {
     const image = { uri: imageUri, alt: imageAlt };
     formatedFiles.push(image);
 
-    indexForResponses++;
+    index++;
   }
 
   try {
     product = await Product.findById({ _id: req.body._id });
-    const params = {
-      Bucket: bucketName,
-      Delete: {
-        Objects: []
-      }
-    };
-  
-    /** 
-     * Loop to check if the formatedFiles does not contain an image uri that stored in the old Product
-     * If so, push the access key for this image to the images we must delete from our S3 bucket
-     */
-    for (const imageOfProduct of product.images) {
-      if (!formatedFiles.some(formatedFile => formatedFile.uri === imageOfProduct.uri)) {
-        const imageName = {
-          Key: imageOfProduct.uri.split(url).join('')
-        };
-        params.Delete.Objects.push(imageName);
-      }
-    }
-
-    s3.deleteObjects(params, (e, data) => {
-      if (e) { 
-        return res.status(500).json({
-          e: e,
-        });
-      }
-    });
-  
-    product = {
-      name: req.body.name,
-      description: req.body.description,
-      price: req.body.price,
-      images: formatedFiles,
-    };
-  
-    result = await Product.updateOne({ _id: req.body._id }, product);
-    
-    if (result.n > 0) {
-      return res.status(200).json();
-    } else {
-      return res.status(401).json({
-          e : "Unknow error with the edit",
-      });
-    }
   } catch (e) {
-    res.status(400).json({
-      e: e,
-    });
+    return res.status(404).json(e);
   }
+
+  const params = {
+    Bucket: bucketName,
+    Delete: {
+      Objects: []
+    },
+  };
+
+  for (const imageOfProduct of product.images) {
+    if (!formatedFiles.some(formatedFile => formatedFile.uri === imageOfProduct.uri)) {
+      const imageName = {
+        Key: imageOfProduct.uri.split(url).join(''),
+      };
+      params.Delete.Objects.push(imageName);
+    }
+  }
+
+  try {
+    await s3.deleteObject(params).promise();
+  } catch (e) {
+    return res.status(500).send();
+  }
+
+  product = {
+    name: req.body.name,
+    description: req.body.description,
+    price: req.body.price,
+    images: formatedFiles,
+  };
+  
+  product.validate(async (err) => {
+    
+    if (err) {
+      return res.status(422).json(err);
+    }
+  
+    try {
+      result = await Product.updateOne({ _id: req.body._id }, product);
+  
+      if (result.n > 0) {
+        return res.status(200).send();
+      } else {
+        return res.status(401).json(e);
+      } 
+    } catch (e) {
+      res.status(400).json(e);
+    }
+  });
 }
 
 /**
@@ -321,38 +290,36 @@ exports.deleteProduct = async (req, res, next) => {
       Objects: []
     }
   };
-  
+
   try {
     const product = await getProduct(req.params.id);
-  
+
     // Loop through every images to delete and delete them from the S3 bucket
     for (let image of product.images) {
       const imageName = {
-        Key: image.uri.split(url).join('')
+        Key: image.uri.split(url).join(''),
       };
       params.Delete.Objects.push(imageName);
     }
+  } catch (e) {
+    return res.status(404).json(e);
+  }
   
-    s3.deleteObjects(params, (e, data) => {
-      if (e) { 
-        return res.status(500).json({
-          e: e,
-        });
-      }
-    });
+  try {
+    await s3.deleteObjects(params).promise();
+  } catch (e) {
+    return res.status(500).send();
+  }
 
+  try {
     const result = await Product.deleteOne({ _id: req.params.id });
     if (result.n > 0) {
-      next();
+      next() 
     } else {
-      res.status(401).json({
-        message: 'Not authorized',
-      });
-    }
+      res.status(401).json(e);
+    } 
   } catch (e) {
-    res.status(400).json({
-      e: e,
-    });
+    res.status(400).json(e);
   }
 };
 
@@ -364,8 +331,6 @@ getProduct = async (productId) => {
   try {
     return await Product.findById({ _id: productId });
   } catch (e) {
-    return res.status(404).json({
-      e :e,
-    });
+    return res.status(404).json(e);
   }
 };
