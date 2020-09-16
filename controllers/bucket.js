@@ -96,7 +96,7 @@ exports.deleteBucket = async (req, res) => {
     const result = await Bucket.deleteMany({ 'userId': req.userData.userId });
 
     if (result.n > 0) {
-      res.status(200).send();
+      res.status(204).send();
     } else {
       res.status(401).json({ e: 'Unknow error with the edition' });
     } 
@@ -118,7 +118,7 @@ exports.updateBucketAfterProductDeletion = async (req, res) => {
     buckets = await Bucket.find({ 'products.product._id': req.params.id });
 
     if (buckets.length === 0) {
-      return res.status(200).send();
+      return res.status(204).send();
     }
 
     result = await Bucket.updateMany({
@@ -133,7 +133,7 @@ exports.updateBucketAfterProductDeletion = async (req, res) => {
     });
 
     if (result.n > 0) {
-      return res.status(200).send();
+      return res.status(204).send();
     } else {
       return res.status(401).json({ e: "Unknow error with the edit" });
     } 

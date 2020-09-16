@@ -12,6 +12,11 @@ const User = require('../models/user');
  * @returns {json{e<string> || e<string>, token, expiresIn<number>, userId<string>}}
  */
 exports.login = async (req, res) => {
+
+  if (!req.body.email || !req.body.password) {
+    return res.status(422).send();
+  }
+  
   try {
     const user = await User.findOne({
       email: req.body.email,
