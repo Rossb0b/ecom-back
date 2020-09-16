@@ -67,6 +67,7 @@ exports.getCommands = async (req, res) => {
   try {
     // Get the current logged in user data and check about his role
     user = await User.findById({ _id: req.userData.userId });
+    
     if (user.role === 0) {
       users = await User.find();
       commands = await Command.find().lean()

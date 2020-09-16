@@ -261,7 +261,7 @@ exports.updateProduct = async (req, res) => {
       result = await Product.updateOne({ _id: req.body._id }, product);
   
       if (result.n > 0) {
-        return res.status(200).send();
+        return res.status(204).send();
       } else {
         return res.status(401).json(e);
       } 
