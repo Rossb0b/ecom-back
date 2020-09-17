@@ -9,11 +9,12 @@ module.exports = async (req, res, next) => {
     const user = await User.findById({ _id: decodedToken.userId });
 
     if (user.role === 0) {
+      req.userData.admin = true;
       next();
     } else {
-      res.status(401).json({message: 'You are not admin or not authenticated'});
+      return res.status(401).json({message: 'You are not admin or not authenticated'});
     }
   } catch (error) {
-    res.status(401).json({ message: 'You are not admin or not authenticated' });
+    return res.status(401).json({ message: 'You are not admin or not authenticated' });
   }
 };
