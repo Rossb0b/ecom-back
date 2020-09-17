@@ -9,12 +9,12 @@ module.exports = async (req, res, next) => {
     next();
   } catch (e) {
     if (e.name = 'TokenExpiredError') {
-      res.status(401).json({
+      return res.status(401).json({
         message: 'You are not authenticated',
         intercept: false,
       });
     } else {
-      res.status(401).json({ 
+      return res.status(401).json({ 
         message: 'You are not authenticated'
       });
     }
